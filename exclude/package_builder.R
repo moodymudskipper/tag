@@ -9,8 +9,5 @@ usethis::use_package("tidyselect")
 usethis::use_package("tibble")
 usethis::use_package("tidyr")
 usethis::use_gpl3_license("GPL-3")
-usethis::depen
 
 usethis::use_readme_rmd()
-
-devtools::check_win_devel()
