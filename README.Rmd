@@ -21,9 +21,6 @@ and can be called using `$` so that `..tag$obj` is equivalent to `..tag(obj)`.
 They're often used to alter a function (in this case they are adverbs), but can 
 be used on other object types.
 
-Short names have been favored so far so more visual focus is on the tagged 
-object (it is also shorter to type!)
-
 For now it's more a collection of experiment rather than a cohesive package.
 
 See bottom for some reflexions
@@ -46,7 +43,7 @@ x <- list(a=c(1, 2), b=c(3, 4))
 `..grp` uses `dplyr::group_by` for a single operation, it adds a `.by` argument to the function
 
 ```{r}
-library(dplyr)
+library(dplyr, warn.conflicts = FALSE)
 ..grp$summarize_all(iris,mean, .by="Species")
 ```
 
@@ -62,7 +59,7 @@ library(dplyr)
 
 `..at` makes `dplyr::mutate` and `dplyr::summarize` compatible with the use of
 `at` to enjoy features of `mutate_at` and `summarize_at` in the same call.
-Trhough the `.key` argument `summarize` also supports multi spread in an
+Through the `.key` argument `summarize` also supports multi spread in an
 intuitive way. `at(...)` is actually a shortcut for `!!!.at(FIRST_ARG, ...)` 
 (where `FIRST_ARG` will just be `.` in a pipe chain), which can be called without
 the tag `..at`
@@ -115,7 +112,7 @@ changed along the rules from `?options` . See also `%strict>%` in my package
 
 ---------------
 
-`..try` will add an argument `else` which will be evaluated if normal call fails.
+`..try` will add an argument `.else` which will be evaluated if normal call fails.
 
 ```{r}
 ..try$paste("hello","world", .else = "hi")
@@ -210,19 +207,36 @@ x <- c("hello","sup", "hey","mornin")
 ..chr$x / "^h"
 ```
 
+# creating an adverb tag
+
+To create a custom adverb tag we just need to design an adverb and give it the
+appropriate class. The class `"tag"` is used
+for the `$.tag` method, the class `"adverb"` is used for composition.
+
+```{r}
+..neg <- Negate
+class(..neg) <- c("tag","adverb","function")
+..neg$is.numeric("a")
+..up <- function(f) function(...) toupper(f(...))
+class(..up) <- c("tag","adverb","function")
+..up$substr("hello world",1,5)
+```
+
+
 # reflexions 
 
-Tags are an exploration methods for `$`. 
+All exported functions from the package *tags* use the `$.tag` method. 
 
-They could have been just `NA` objects with a method for `$`, this is the approach
-taken by Gabor Grothendieck for `gsubfn::fn`. I think however that it's clearer
-to think of them as functions with a `$` shorthand thanks to their class `"tag"`.
+Tag functions could have been just `NA` objects with a method for `$`, this is
+the approach taken by Gabor Grothendieck for `gsubfn::fn`. I think however that
+it's clearer to think of them as functions with a `$` shorthand thanks to their
+class `"tag"`.
 
 -----------
 
 Usually adverbs don't add argument to a function, instead arguments are passed
 to the adverb (so they can be documented traditionally) and arguments
-are left untouched or some are removed (e.g. `partial`). i.e. We find a lot of
+are left untouched or some are removed (e.g. `purrr::partial`). i.e. We find a lot of
 `adv(fun, adv_arg)(fun_arg)` but never `adv(fun)(fun_arg, new_arg)` as is done
 in this package. The latter is less easy to document, but easier to read and
 makes tags possible.
@@ -232,12 +246,14 @@ makes tags possible.
 Adverb tags are the most likely to be expanded, maybe other
 tags should have a different prefix (or none ?), so we can have more consistency.
 
-Traditional adverbs suffer from their naming inconsistencies :
+Traditional adverbs suffer from :
 
-* compose, partial, safely, Negate
-* rate_delay is an adverb, rate_backoff isn't
-* brackets and parameters are awkward for inline use :
-* the adverb is highlighted, the function is not
+* naming conventions (verb? adjective? adverb?): `purrr::compose`, 
+`purrr::partial`, `purrr::safely`, `Negate`
+* naming inconsistencies: `rate_delay` is an adverb, `rate_backoff` isn't
+* brackets and parameters are awkward for inline use as parameters end up between
+the adverb and the input function
+* the adverb is highlighted by the editor, the function is not
 
 
 ```{r}
@@ -255,6 +271,9 @@ This package offers an opportunity for consistency, though it's spoiled by
 the presence of non adverb tags, which might be better off with a different
 prefix (or none) so all tags would be adverbs. Non adverb tags are
 `..dt`, `..w`, `..pp` and `..fs` (the latter being technically an adverb).
+
+Adverbs might be underused because their use is not intuitive, maybe tags
+can help in this regard.
 
 ---------------
 
@@ -282,6 +301,6 @@ it's smart if the family grows
 
 ---------------
 
-Through some miracle that I don't understand, autocomplete works on tagged
-functions.
+Through some miracle that I don't understand, RStudio's completion suggestions
+works on tagged functions (including added parameters).
 
