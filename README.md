@@ -1,369 +1,264 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
-tags
-====
+Introduction
+------------
 
-tags are single argument functions which are always named with the prefix `..` and can be called using `$` so that `..tag$obj` is equivalent to `..tag(obj)`.
+`tag`s are essentially adverb factories, they build adverbs (also called function operators) from a set of parameters. `tag_adverb`s are adverbs, unlike `tag`s they take a function as a first parameter. Both benefit from a special syntax using the `$` operator.
 
-They're often used to alter a function (in this case they are adverbs), but can be used on other object types.
-
-For now it's more a collection of experiment rather than a cohesive package.
-
-See bottom for some reflexions
-
-used as an adverb
------------------
-
-`..bang` will make any function compatible with quasiquotation
+Installation :
 
 ``` r
-library(rlang)
-#> Warning: package 'rlang' was built under R version 3.5.3
-u <- "speed"
-v <- quote(dist)
-w <- quo(time)
-x <- list(a=c(1, 2), b=c(3, 4))
-..bang$transform(head(cars,2), !!w := !!v / !!sym(u), !!!x)
-#>   speed dist time a b
-#> 1     4    2  0.5 1 3
-#> 2     4   10  2.5 2 4
+# devtools::install_github("moodymudskipper/tag")
+library(tag)
 ```
 
-------------------------------------------------------------------------
+See also the package `tags` which includes many tags defined with the help of this package.
 
-`..grp` uses `dplyr::group_by` for a single operation, it adds a `.by` argument to the function
+Note: It is still largely in progress and potentially subject to major breaking changes.
+
+Formalism
+---------
+
+`tag`s are designed to be used intuitively and are best understood by examples such as the ones proposed below.
+
+The output of a `tag` call is a `tag_adverb`. The output of a `tag_adverb` call is called a manufactured function. The first argument of a `tag_adverb` is called the input function.
+
+The `args` argument becomes either the formals of a `tag` object or the additional arguments of a `tag_adverb` object (the first being `f`). We may refer to `args` as the *new formals*.
+
+Syntax
+------
+
+The `$` syntax offers an intuitive and flexible alternative to the traditional adverb syntax. `some_tag(tag_arg)$fun(fun_arg)` can be used instead of `some_tag(tag_arg)(fun)(fun_arg)`.
+
+When a parameter is not provided to the `tag` it is featured as a parameter of its `tag_adverb` output so `some_tag(tag_arg)$fun(fun_arg)` can be written `some_tag()(fun, tag_arg)(fun_arg)`.
+
+When a parameter is not provided to the `tag_adverb`, it is featured as a parameter of the manufactured function, so the latter call can be spelt `some_tag()(fun)(fun_arg, tag_arg)`, which we'll often simply write `some_tag$fun(fun_arg, tag_arg)`.
+
+This forwarding of unused arguments mixed with the magic built into the methods `$.tag` and `$.adverb` allows a lot of flexibility, and interesting intermediate objects can be built to be used as shorthands or in functionals.
+
+We build below a copy of the `viewing` tag from the package `tags` and showcase
 
 ``` r
-library(dplyr, warn.conflicts = FALSE)
-#> Warning: package 'dplyr' was built under R version 3.5.3
-..grp$summarize_all(iris,mean, .by="Species")
-#> # A tibble: 3 x 5
-#>   Species    Sepal.Length Sepal.Width Petal.Length Petal.Width
-#>   <fct>             <dbl>       <dbl>        <dbl>       <dbl>
-#> 1 setosa             5.01        3.43         1.46       0.246
-#> 2 versicolor         5.94        2.77         4.26       1.33 
-#> 3 virginica          6.59        2.97         5.55       2.03
+ # viewing2 tag to view the output of a call
+ viewing2 <- tag(args = alist(.title = "View"),{
+   res <- eval(CALL)
+   View(res,title = .title)
+   res
+ })
+class(viewing2)
+#> [1] "tag"      "function"
+class(viewing2("A"))
+#> [1] "tag_adverb"             "purrr_function_partial"
+#> [3] "function"
+class(viewing2("A")(head))
+#> [1] "function"
 ```
 
-------------------------------------------------------------------------
-
-`..lbd` detects formula arguments allows self referencing in functions such as `transform`, `dplyr::mutate` and `dplyr::summarize`
-
 ``` r
-..lbd$mutate(head(iris,2), Petal.Width = ~1000*(.), Species = ~toupper(.))
-#>   Sepal.Length Sepal.Width Petal.Length Petal.Width Species
-#> 1          5.1         3.5          1.4         200  SETOSA
-#> 2          4.9         3.0          1.4         200  SETOSA
+ viewing2("A")(head)(cars, 2)             # "A" is fed to the tag
+ viewing2("B")$head(cars, 2)              # equivalent, arguably more readable
+ viewing2()(head, "C")(cars, 2)           # "C" is fed to the tag_adverb
+ viewing2()(head)(cars, 2, .title = "D")  # "D" is fed to the manufactured function
+ viewing2()$head(cars, 2, .title = "E")   # "E" equivalent, a bit more readable
+ viewing2$head(cars, 2, .title = "F")     # equivalent, arguably more readable
 ```
 
-------------------------------------------------------------------------
+Using patterns
+--------------
 
-`..at` makes `dplyr::mutate` and `dplyr::summarize` compatible with the use of `at` to enjoy features of `mutate_at` and `summarize_at` in the same call. Through the `.key` argument `summarize` also supports multi spread in an intuitive way. `at(...)` is actually a shortcut for `!!!.at(FIRST_ARG, ...)` (where `FIRST_ARG` will just be `.` in a pipe chain), which can be called without the tag `..at`
+The `pattern` argument is a representation of the body of the manufactured function. It allows for short definitions of `tag`s and `tag_adverb`s thanks to a set of objects that one can use in the definitions.
+
+Available objects are :
+
+-   `f`: input function
+-   `SCALL`: unevaluated expression containing the naked input function call, i.e. the way the function would have been called without the tag or its arguments
+-   `CALL`: Same as `SCALL` but the arguments that were not named in the call are named (unless they're part of the `...`)
+-   `CALL_UNEXP`: Same as `CALL` but the `...` are *NOT* expanded
+-   `ARGS`: List of the unevaluated arguments as given in the call, identical to `CALL`
+-   `FORMALS`: List of the unevaluated arguments as given in the call
+-   `NEW_FORMALS`: The formals of the `tag`, or additional formals of the `tag_adverb`
+
+`f` and `CALL` suffice for most tag definitions.
+
+This is the neutral tag, it doesn't do anything :
 
 ``` r
-..at$summarize(iris, at(vars(starts_with("Sepal")),lst(mean,median)))
-#>   Sepal.Length_mean Sepal.Width_mean Sepal.Length_median
-#> 1          5.843333         3.057333                 5.8
-#>   Sepal.Width_median
-#> 1                  3
-iris %>% summarize(!!!.at(.,vars(starts_with("Sepal")),lst(mean,median)))
-#>   Sepal.Length_mean Sepal.Width_mean Sepal.Length_median
-#> 1          5.843333         3.057333                 5.8
-#>   Sepal.Width_median
-#> 1                  3
-mtcars %>%
-  group_by(gear) %>%
-  ..at$summarize(at(c("disp","hp"), mean, .keys = vars(cyl)))
-#> # A tibble: 3 x 7
-#>    gear disp_cyl_6_mean disp_cyl_4_mean disp_cyl_8_mean hp_cyl_6_mean
-#>   <dbl>           <dbl>           <dbl>           <dbl>         <dbl>
-#> 1     3            242.            120.            358.          108.
-#> 2     4            164.            103.            NaN           116.
-#> 3     5            145             108.            326           175 
-#> # ... with 2 more variables: hp_cyl_4_mean <dbl>, hp_cyl_8_mean <dbl>
+identity_tag <- tag({eval(CALL)})
+identity_tag$mean(c(1,2,NA,3), na.rm = TRUE)
+#> [1] 2
 ```
 
-------------------------------------------------------------------------
-
-`..ip` modifies a function so it assigns in place to its first argument :
+This tags gives informations about the call using all our shortcuts :
 
 ``` r
-x <- "a"
-..ip$toupper(x)
-x
-#> [1] "A"
+verbosing <- tag(args = alist(descr="Here's a breakdown of the call"), {
+  message(descr)
+  cat("----------------------------------------------\n")
+  message("`f`: input function\n")
+  print(f)
+  cat("----------------------------------------------\n")
+  message("`SCALL`: unevaluated expression containing the naked input function call\n")
+  print(SCALL)
+  cat("----------------------------------------------\n")
+  message("`CALL`: Same as `SCALL` but the arguments that were not named in the call are named\n")
+  print(CALL)
+  cat("----------------------------------------------\n")
+  message("`CALL_UNEXP`: Same as `CALL` but the `...` are *NOT* expanded\n")
+  print(CALL_UNEXP)
+  cat("----------------------------------------------\n")
+  message("`ARGS`: List of the unevaluated arguments as given in the call, identical to `CALL`\n")
+  print(ARGS)
+  cat("----------------------------------------------\n")
+  message("`FORMALS`: List of the unevaluated arguments as given in the call\n")
+  print(FORMALS)
+  cat("----------------------------------------------\n")
+  message("`NEW_FORMALS`: The formals of the `tag`, or additional formals of the `tag_adverb`\n")
+  print(NEW_FORMALS)
+  cat("----------------------------------------------\n")
+  message("`Now evaluating call:\n")
+  eval(CALL)
+ })
+
+verbosing("See details below:")$mean(c(1,2,NA,3), na.rm = TRUE)
+#> See details below:
+#> ----------------------------------------------
+#> `f`: input function
+#> function (x, ...) 
+#> UseMethod("mean")
+#> <bytecode: 0x0000000019e2e3a8>
+#> <environment: namespace:base>
+#> ----------------------------------------------
+#> `SCALL`: unevaluated expression containing the naked input function call
+#> (function (x, ...) 
+#> UseMethod("mean"))(c(1, 2, NA, 3), na.rm = TRUE)
+#> ----------------------------------------------
+#> `CALL`: Same as `SCALL` but the arguments that were not named in the call are named
+#> (function (x, ...) 
+#> UseMethod("mean"))(x = c(1, 2, NA, 3), na.rm = TRUE)
+#> ----------------------------------------------
+#> `CALL_UNEXP`: Same as `CALL` but the `...` are *NOT* expanded
+#> (function (x, ...) 
+#> UseMethod("mean"))(x = c(1, 2, NA, 3), ... = pairlist(na.rm = TRUE))
+#> ----------------------------------------------
+#> `ARGS`: List of the unevaluated arguments as given in the call, identical to `CALL`
+#> $x
+#> c(1, 2, NA, 3)
+#> 
+#> $na.rm
+#> [1] TRUE
+#> 
+#> ----------------------------------------------
+#> `FORMALS`: List of the unevaluated arguments as given in the call
+#> $x
+#> 
+#> 
+#> $...
+#> 
+#> 
+#> ----------------------------------------------
+#> `NEW_FORMALS`: The formals of the `tag`, or additional formals of the `tag_adverb`
+#> $descr
+#> [1] "Here's a breakdown of the call"
+#> 
+#> ----------------------------------------------
+#> `Now evaluating call:
+#> [1] 2
 ```
 
-------------------------------------------------------------------------
+More examples with code
+-----------------------
 
-`..View` will open the viewer on the output, handy to debug, or in pipe chains, see also `%View>%` in my package *pipes*
+Thes ecome directly from the package tags.
 
-``` r
-..View$head(iris)
-```
-
-------------------------------------------------------------------------
-
-`..nowarn` will suppress the warnings, a parameter `warn = -1` can be changed along the rules from `?options` . See also `%nowarn>%` in my package *pipes*.
+#### `strictly` tag to adjust strictness of a call
 
 ``` r
-..nowarn$sqrt(-1)
+strictly <- tag(args = alist(warn=2),{
+  w <- options("warn")[[1]]
+  on.exit(options(warn=w))
+  options(warn= warn)
+  eval(CALL)
+})
+strictly(-1)$sqrt(-1)
 #> [1] NaN
 ```
 
-------------------------------------------------------------------------
-
-`..strict` will turn any warning into an error, a parameter `warn = -1` can be changed along the rules from `?options` . See also `%strict>%` in my package *pipes*.
+#### `dbg` tag to debug a call
 
 ``` r
-..strict$sqrt(-1)
-#> Error in sqrt(x = -1): (converted from warning) NaNs produced
+dbg <- tag({
+  debugonce(f)
+  exec("f", !!!purrr::map(ARGS, eval))
+})
+dbg$sample(5)
 ```
 
-------------------------------------------------------------------------
-
-`..try` will add an argument `.else` which will be evaluated if normal call fails.
+#### `logging` tag to log call and time it took
 
 ``` r
-..try$paste("hello","world", .else = "hi")
+logging <- tag(args = alist(.time = TRUE, .print = TRUE),{
+  message(deparse(match.call()))
+  cat("  ~ ...")
+  if(.time) cat("\b\b\b", system.time(res <- eval(CALL))[3], "sec\n") else
+    res <- eval(CALL)
+  if(.print) print(res)
+  invisible(res)
+})
+logging$head(cars,2)
+#> logging$head(x = cars, 2)
+#>   ~ ... 0 sec
+#>   speed dist
+#> 1     4    2
+#> 2     4   10
+```
+
+#### `trying` tag to try a call or if failure call alternate call
+
+``` r
+trying <- tag(
+  args = alist(.else=, .silent = FALSE),{
+    res <- try(eval(CALL), silent = .silent)
+    if(inherits(res, "try-error")){
+      res <- .else
+      if(rlang::inherits_any(res, c("function","formula")))
+        res <- rlang::as_function(res)(eval(ARGS[[1]]))
+    }
+    res
+  })
+trying$paste("hello","world", .else = "hi")
 #> [1] "hello world"
-..try$paste("hello", world, .else = "hi")
-#> Error in paste("hello", world) : object 'world' not found
+trying$paste("hello", world, .else = "hi")
+#> Error in (function (..., sep = " ", collapse = NULL)  : 
+#>   object 'world' not found
 #> [1] "hi"
-..try$paste("hello", world, .else = "hi", .silent = TRUE)
+trying$paste("hello", world, .else = "hi", .silent = TRUE)
 #> [1] "hi"
 ```
 
-------------------------------------------------------------------------
-
-`..debug` runs `debugonce` on the tagged function
+#### `preserving_attr` tag to preserve attributes
 
 ``` r
-..debug$ave(1:4, rep(1:2,each =2))
-#> debugging in: ave(x = 1:4, rep(1:2, each = 2))
-#> debug: {
-#>     if (missing(...)) 
-#>         x[] <- FUN(x)
-#>     else {
-#>         g <- interaction(...)
-#>         split(x, g) <- lapply(split(x, g), FUN)
-#>     }
-#>     x
-#> }
-#> debug: if (missing(...)) x[] <- FUN(x) else {
-#>     g <- interaction(...)
-#>     split(x, g) <- lapply(split(x, g), FUN)
-#> }
-#> debug: g <- interaction(...)
-#> debug: split(x, g) <- lapply(split(x, g), FUN)
-#> debug: x
-#> exiting from: ave(x = 1:4, rep(1:2, each = 2))
-#> [1] 1.5 1.5 3.5 3.5
+preserving_attr <- tag(args = alist(
+  .arg = 1, incl_row.names = FALSE, incl_class = FALSE,
+  incl_names = FALSE, incl_dim = FALSE), {
+    #browser()
+    eval(expr(attr_saved <- attributes(!!(ARGS[[.arg]]))))
+    attr_saved[names(attr_saved) %in% c(
+      "row.names"[!incl_row.names],
+      "class"[!incl_class],
+      "dim"[!incl_dim])] <- NULL
+    res <- eval(CALL)
+    attributes(res)[names(attr_saved)] <- attr_saved
+    res
+  })
+preserving_attr$map_dfr(head(iris,2),identity)
+#> # A tibble: 2 x 5
+#>   Sepal.Length Sepal.Width Petal.Length Petal.Width Species
+#> *        <dbl>       <dbl>        <dbl>       <dbl> <fct>  
+#> 1          5.1         3.5          1.4         0.2 setosa 
+#> 2          4.9         3            1.4         0.2 setosa
+preserving_attr(incl_class = TRUE)$map_dfr(head(iris,2),identity)
+#>   Sepal.Length Sepal.Width Petal.Length Petal.Width Species
+#> 1          5.1         3.5          1.4         0.2  setosa
+#> 2          4.9         3.0          1.4         0.2  setosa
 ```
-
-special tags
-------------
-
-`..w` (like "with") is a tag that can be used for subsetting with `[`, allowing self referencing with `.`, named elements can be accessed by their names like in `with`, except that `with` doesn't support atomic vectors. `[[` doesn't subset but returns the value of the content of the brackets
-
-``` r
-..w$iris[nrow(.),]
-#>     Sepal.Length Sepal.Width Petal.Length Petal.Width   Species
-#> 150          5.9           3          5.1         1.8 virginica
-vec1 <- c(a=1,b=2,c=3,d=4)
-..w$vec1[.>b]
-#> c d 
-#> 3 4
-vec2 <- 1:20
-..w$vec2[.>10]
-#>  [1] 11 12 13 14 15 16 17 18 19 20
-..w$iris[[nrow(.)]]
-#> [1] 150
-vec1 <- c(a=1,b=2,c=3,d=4)
-..w$vec1[[b+c]]
-#> [1] 5
-vec2 <- 1:20
-..w$vec2[[length(.)/2]]
-#> [1] 10
-```
-
-`..fn` changes arguments named `FUN` from formula to function using `purrr::as_mapper`, (in base R all function arguments are named `FUN`). It is named as a tribute to Gabor Grothendieck's `gsubfn::fn`, which works in a similar way.
-
-``` r
-..fn$sapply(iris, ~class(.))
-#> Sepal.Length  Sepal.Width Petal.Length  Petal.Width      Species 
-#>    "numeric"    "numeric"    "numeric"    "numeric"     "factor"
-```
-
-`..p` initiates a dollar pipe chain
-
-``` r
-..p$iris$head$Filter(is.numeric,.)$dim()
-#> [1] 6 4
-```
-
-`..fs` initiates a dollar pipe unabled functional sequence (it's technically an adverb but too weird to be included above)
-
-``` r
-fun <- ..fs$head(2)$gsub("h","X",.)
-fun(c("hello","hi","foo"))
-#> [1] "Xello" "Xi"
-```
-
-`..dt` allows using *data.table* syntax and performance for a single operation without cumbersome conversions
-
-``` r
-iris2 <- head(iris,2)
-..dt$iris2[,Species2:=toupper(Species)]
-#>   Sepal.Length Sepal.Width Petal.Length Petal.Width Species Species2
-#> 1          5.1         3.5          1.4         0.2  setosa   SETOSA
-#> 2          4.9         3.0          1.4         0.2  setosa   SETOSA
-```
-
-experiments
------------
-
-Those tags are not extremely useful, but were implemented when playing around with the concept of tag, and might serve as inspiration.
-
-`..incr` is used to increment values
-
-``` r
-x <- 3
-+..incr$x
-#> [1] 4
-..incr$x + 5
-#> [1] 9
--..incr$x
-#> [1] 8
-..incr$x - 2
-#> [1] 6
-```
-
-`..chr` allows arithmetic operations on strings, `+` and `-` paste in different order, `*` duplicates the strings and `/` subsets with a regex
-
-``` r
-x <- "hello"
-..chr$x + "world"
-#> [1] "helloworld"
-..chr$x + "world" - "oh"
-#> [1] "ohhelloworld"
-..chr$x + "world" - "oh" + toupper + unclass
-#> [1] "OHHELLOWORLD"
-..chr$x * 3
-#> [1] "hellohellohello"
-x <- c("hello","sup", "hey","mornin")
-..chr$x / "^h"
-#> [1] "hello" "hey"
-```
-
-creating an adverb tag
-======================
-
-To create a custom adverb tag we just need to design an adverb and give it the appropriate class. The class `"tag"` is used for the `$.tag` method, the class `"adverb"` is used for composition.
-
-``` r
-..neg <- Negate
-class(..neg) <- c("tag","adverb","function")
-..neg$is.numeric("a")
-#> [1] TRUE
-..up <- function(f) function(...) toupper(f(...))
-class(..up) <- c("tag","adverb","function")
-..up$substr("hello world",1,5)
-#> [1] "HELLO"
-```
-
-reflexions
-==========
-
-All exported functions from the package *tags* use the `$.tag` method.
-
-Tag functions could have been just `NA` objects with a method for `$`, this is the approach taken by Gabor Grothendieck for `gsubfn::fn`. I think however that it's clearer to think of them as functions with a `$` shorthand thanks to their class `"tag"`.
-
-------------------------------------------------------------------------
-
-Usually adverbs don't add argument to a function, instead arguments are passed to the adverb (so they can be documented traditionally) and arguments are left untouched or some are removed (e.g. `purrr::partial`). i.e. We find a lot of `adv(fun, adv_arg)(fun_arg)` but never `adv(fun)(fun_arg, new_arg)` as is done in this package. The latter is less easy to document, but easier to read and makes tags possible.
-
-------------------------------------------------------------------------
-
-Adverb tags are the most likely to be expanded, maybe other tags should have a different prefix (or none ?), so we can have more consistency.
-
-Traditional adverbs suffer from :
-
--   naming conventions (verb? adjective? adverb?): `purrr::compose`, `purrr::partial`, `purrr::safely`, `Negate`
--   naming inconsistencies: `rate_delay` is an adverb, `rate_backoff` isn't
--   brackets and parameters are awkward for inline use as parameters end up between the adverb and the input function
--   the adverb is highlighted by the editor, the function is not
-
-``` r
-library(purrr)
-#> Warning: package 'purrr' was built under R version 3.5.3
-#> 
-#> Attaching package: 'purrr'
-#> The following objects are masked from 'package:rlang':
-#> 
-#>     %@%, as_function, flatten, flatten_chr, flatten_dbl,
-#>     flatten_int, flatten_lgl, flatten_raw, invoke, list_along,
-#>     modify, prepend, splice
-safely(log, otherwise = NA_real_)(10)
-#> $result
-#> [1] 2.302585
-#> 
-#> $error
-#> NULL
-safely(log, otherwise = NA_real_)("a")
-#> $result
-#> [1] NA
-#> 
-#> $error
-#> <simpleError in .Primitive("log")(x, base): non-numeric argument to mathematical function>
-safely(log, otherwise = NA_real_)("a")$result
-#> [1] NA
-# not the same thing but as a comparison
-..try$log(10, .else = NA_real_)
-#> [1] 2.302585
-..try$log("a", .else = NA_real_)
-#> Error in log(x = "a") : non-numeric argument to mathematical function
-#> [1] NA
-..try$log("a", .else = NA_real_, .silent = TRUE)
-#> [1] NA
-```
-
-This package offers an opportunity for consistency, though it's spoiled by the presence of non adverb tags, which might be better off with a different prefix (or none) so all tags would be adverbs. Non adverb tags are `..dt`, `..w`, `..pp` and `..fs` (the latter being technically an adverb).
-
-Adverbs might be underused because their use is not intuitive, maybe tags can help in this regard.
-
-------------------------------------------------------------------------
-
-Thanks to the fact they're functions, we can compose them when they are adverbs (another reason to dissociate non adverbs):
-
-``` r
-# same output:
-..View(..grp$summarize_all)(iris, mean, .by = "Species")
-#> # A tibble: 3 x 5
-#>   Species    Sepal.Length Sepal.Width Petal.Length Petal.Width
-#>   <fct>             <dbl>       <dbl>        <dbl>       <dbl>
-#> 1 setosa             5.01        3.43         1.46       0.246
-#> 2 versicolor         5.94        2.77         4.26       1.33 
-#> 3 virginica          6.59        2.97         5.55       2.03
-..grp(..View$summarize_all)(iris, mean, .by = "Species")
-#> # A tibble: 3 x 5
-#>   Species    Sepal.Length Sepal.Width Petal.Length Petal.Width
-#>   <fct>             <dbl>       <dbl>        <dbl>       <dbl>
-#> 1 setosa             5.01        3.43         1.46       0.246
-#> 2 versicolor         5.94        2.77         4.26       1.33 
-#> 3 virginica          6.59        2.97         5.55       2.03
-```
-
-Though chaining with `..View$..grp$(...)` is possible to implement.
-
-------------------------------------------------------------------------
-
-Maybe names starting with ".", are an issue, I haven't thought it through, maybe something like `T.tag$obj` but it doesn't looks as good, and less like a tag.
-
-------------------------------------------------------------------------
-
-Short names have been preferred to put focus on input function, not sure if it's smart if the family grows
-
-------------------------------------------------------------------------
-
-Through some miracle that I don't understand, RStudio's completion suggestions works on tagged functions (including added parameters).
