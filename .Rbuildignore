@@ -1,5 +1,5 @@
 ^README\.Rmd$
 ^LICENSE\.md$
 ^exclude$
-^tags\.Rproj$
+^tag\.Rproj$
 ^\.Rproj\.user$

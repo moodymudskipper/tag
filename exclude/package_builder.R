@@ -10,10 +10,12 @@ usethis::use_package("tibble")
 usethis::use_package("tidyr")
 usethis::use_gpl3_license("GPL-3")
 
+
+usethis::use_testthat()
 usethis::use_readme_rmd()
 
 
-shell("git remote add origin https://github.com/moodymudskipper/tags.git",intern = TRUE)
+shell("git remote add origin https://github.com/moodymudskipper/tag.git",intern = TRUE)
 shell("git push -u origin master",intern = TRUE)
 
-devtools::install_github("moodymudskipper/tags")
+devtools::install_github("moodymudskipper/tag")
