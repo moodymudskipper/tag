@@ -28,7 +28,7 @@ Both benefit from a special syntax using the \code{$} operator.
 \section{Formalism}{
 
 \code{tag}s are designed to be used intuitively and are best understood by
-examples such as the one proposed below.
+examples such as the ones proposed below.
 
 The output of a \code{tag} call is a \code{tag_adverb}. The output of a \code{tag_adverb}
 call is called a manufactured function. The first argument of a \code{tag_adverb}
@@ -82,7 +82,7 @@ identical to \code{CALL}}
 the \code{tag_adverb}}
 }
 
-\code{f} and \code{CALLS} suffice for most tag definitions.
+\code{f} and \code{CALL} suffice for most tag definitions.
 }
 
 \examples{
