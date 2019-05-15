@@ -12,7 +12,7 @@ Installation :
 library(tag)
 ```
 
-See also the package `tags` which includes many tags defined with the help of this package.
+See also the package `tags` which includes many tags defined with the help of this package: <https://github.com/moodymudskipper/tags>.
 
 Note: It is still largely in progress and potentially subject to major breaking changes.
 
@@ -125,7 +125,7 @@ verbosing("See details below:")$mean(c(1,2,NA,3), na.rm = TRUE)
 #> `f`: input function
 #> function (x, ...) 
 #> UseMethod("mean")
-#> <bytecode: 0x0000000019e2e3a8>
+#> <bytecode: 0x0000000019e1e290>
 #> <environment: namespace:base>
 #> ----------------------------------------------
 #> `SCALL`: unevaluated expression containing the naked input function call

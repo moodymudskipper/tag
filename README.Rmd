@@ -31,7 +31,7 @@ library(tag)
 ```
 
 See also the package `tags` which includes many tags defined with the help of
-this package.
+this package: https://github.com/moodymudskipper/tags.
 
 Note: It is still largely in progress and potentially subject to major breaking changes.
 
