@@ -24,8 +24,8 @@ eval_deep <- function(x){
 
 #' imports
 #'
-#' @importFrom rlang names2 exec exprs expr
-
+#' @importFrom rlang names2 exec exprs expr set_names enexpr syms
+NULL
 
 
 
