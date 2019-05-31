@@ -3,12 +3,6 @@
 #   inherits(f, "tagged_function")
 # }
 
-#' @export
-#' @rdname is_tag
-is_tag_adverb <- function(f){
-  inherits(f, "tag_adverb")
-}
-
 #' Check if a function is tag or a tag_adverb
 #'
 #' Checks if the class is `"tag"` or `"tag_adverb"`
@@ -17,4 +11,10 @@ is_tag_adverb <- function(f){
 #' @export
 is_tag <- function(f){
   inherits(f, "tag")
+}
+
+#' @export
+#' @rdname is_tag
+is_tag_adverb <- function(f){
+  inherits(f, "tag_adverb")
 }
