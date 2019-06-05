@@ -8,10 +8,10 @@
 #' @param pattern an unquoted expression, describes what will be done to the naked call
 #'
 #' @param args a pairlist (use `base::alist()` or `rlang::exprs()`) which will
-#'  be used as the formals of the built `tag` or as additional parameters of the
-#'  built `tag_adverb`
-#' @param rm_args a character vector of formal names to remove from the the
-#'   input function
+#'  be used as the formals of the built `tag`
+#' @param eval_args if `TRUE` (default), the tag arguments are evaluated so
+#'   they can be used directly in the tag definition, set to `FALSE` to use
+#'   NSE on tag arguments
 #'
 #' @section Formalism:
 #' `tag`s are designed to be used intuitively and are best understood by
@@ -21,220 +21,144 @@
 #' call is called a manufactured function. The first argument of a `tag_adverb`
 #' is called the input function.
 #'
-#' The `args` argument becomes either the formals of a `tag` object or the
-#' additional arguments of a `tag_adverb` object (the first being `f`). We
-#' may refer to `args` as the *new formals*.
-#'
-#' @section Syntax:
-#' The `$` syntax offers an intuitive and flexible alternative to the traditional
-#' adverb syntax. `some_tag(tag_arg)$fun(fun_arg)` can be used instead of
-#' `some_tag(tag_arg)(fun)(fun_arg)`.
-#'
-#' When a parameter is not provided to the `tag` it is featured as a parameter
-#' of its `tag_adverb` output so `some_tag(tag_arg)$fun(fun_arg)` can be written
-#' `some_tag()(fun, tag_arg)(fun_arg)`.
-#'
-#' When a parameter is not provided to the `tag_adverb`, it is featured as a
-#' parameter of the manufactured function, so the latter call can be spelt
-#' `some_tag()(fun)(fun_arg, tag_arg)`, which we'll often simply write
-#' `some_tag$fun(fun_arg, tag_arg)`.
-#'
-#' This forwarding of unused arguments mixed with the magic built into the
-#' methods `$.tag` and `$.adverb` allows a lot of flexibility, and interesting
-#' intermediate objects can be built to be used as shorthands or in functionals.
-#'
 #' @section Using patterns:
+#'
 #' The `pattern` argument is a representation of the body of the manufactured
-#' function. It allows for short definitions of `tag`s and `tag_adverb`s thanks
-#'  to a set of objects that one can use in the definitions.
-#'
-#' Available objects are :
-#'
-#' \describe{
-#'   \item{`f`}{input function}
-#'   \item{`SCALL`}{unevaluated expression containing the naked input
-#'     function call, i.e. the way the function would have been called without
-#'     the tag or its arguments}
-#'   \item{`CALL`}{Same as `SCALL` but the arguments that were not named in the
-#'     call are named (unless they're part of the `...`)}
-#'   \item{`CALL_UNEXP`}{Same as `CALL` but the `...` are *NOT* expanded}
-#'   \item{`ARGS`}{List of the unevaluated arguments as given in the call,
-#'   identical to `CALL`}
-#'   \item{`FORMALS`}{List of the unevaluated arguments as given in the call}
-#'   \item{`NEW_FORMALS`}{The formals of the `tag`, or additional formals of
-#'     the `tag_adverb`}
-#' }
-#'
-#' `f` and `CALL` suffice for most tag definitions.
+#' function. It allows for short definitions of `tag`s thanks
+#' to a set of objects / function calls such as `f` and `CALL()` that one can
+#' use in the definitions. see `?CALL`
 #'
 #' @export
-#' @examples
-#' ##################
-#' # BUILDING A TAG #
-#' ##################
-#'
-#' # this is the neutral tag, it doesn't do anything
-#' identity_tag <- tag({eval(CALL)})
-#' identity_tag$mean(c(1,2,NA,3), na.rm = TRUE)
-#'
-#' # this tags gives informations about the call using all our shortcuts
-#'verbosing <- tag(args = alist(descr="Here's a breakdown of the call"), {
-#'  message(descr)
-#'  cat("----------------------------------------------\n")
-#'  message("`f`: input function\n")
-#'  print(f)
-#'  cat("----------------------------------------------\n")
-#'  message("`SCALL`: unevaluated expression containing the naked input function call\n")
-#'  print(SCALL)
-#'  cat("----------------------------------------------\n")
-#'  message("`CALL`: Same as `SCALL` but the arguments that were not named in the call are named\n")
-#'  print(CALL)
-#'  cat("----------------------------------------------\n")
-#'  message("`CALL_UNEXP`: Same as `CALL` but the `...` are *NOT* expanded\n")
-#'  print(CALL_UNEXP)
-#'  cat("----------------------------------------------\n")
-#'  message("`ARGS`: List of the unevaluated arguments as given in the call, identical to `CALL`\n")
-#'  print(ARGS)
-#'  cat("----------------------------------------------\n")
-#'  message("`FORMALS`: List of the unevaluated arguments as given in the call\n")
-#'  print(FORMALS)
-#'  cat("----------------------------------------------\n")
-#'  message("`NEW_FORMALS`: The formals of the `tag`, or additional formals of the `tag_adverb`\n")
-#'  print(NEW_FORMALS)
-#'  cat("----------------------------------------------\n")
-#'  message("`Now evaluating call:\n")
-#'  eval(CALL)
-#' })
-#'
-#' verbosing("See details below:")$mean(c(1,2,NA,3), na.rm = TRUE)
-#'
-#' ##########
-#' # SYNTAX #
-#' ##########
-#'
-#' # We build a copy of the `viewing` tag from the package `tags` and showcase
-#' # the syntax.
-#'
-#' # viewing2 tag to view the output of a call
-#' viewing2 <- tag(args = alist(.title = "View"),{
-#'   res <- eval(CALL)
-#'   View(res,title = .title)
-#'   res
-#' })
-#' \dontrun{
-#' viewing2("A")(head)(cars, 2) # "A" is fed to the tag
-#' class(viewing2)
-#' class(viewing2("A"))
-#' class(viewing2("A")(head))
-#' viewing2("B")$head(cars, 2)              # equivalent, arguably more readable
-#' viewing2()(head, "C")(cars, 2)           # "C" is fed to the tag_adverb
-#' viewing2()(head)(cars, 2, .title = "D")  # "D" is fed to the manufactured function
-#' viewing2()$head(cars, 2, .title = "E")   # "E" equivalent, a bit more readable
-#' viewing2$head(cars, 2, .title = "F")     # equivalent, arguably more readable
-#' }
-#'
-#' #################
-#' # MORE EXAMPLES #
-#' #################
-#' # these are copies of some simple tags that can be found in the package tags
-#'
-#' # strictly2 tag to adjust strictness of a call
-#' strictly2 <- tag(args = alist(warn=2),{
-#'   w <- options("warn")[[1]]
-#'   on.exit(options(warn=w))
-#'   options(warn= warn)
-#'   eval(CALL)
-#' })
-#' strictly2(-1)$sqrt(-1)
-#'
-#' # dbg tag to debug a call
-#' dbg2 <- tag({
-#'   debugonce(f)
-#'   exec("f", !!!purrr::map(ARGS, eval))
-#' })
-#' \dontrun{
-#'   dbg2$sample(5)
-#' }
-tag <- function(pattern, args = alist(), rm_args = character(0)){
-  on.exit(rm(res, pattern))
-  pattern <- substitute(pattern)
-  res <- eval(bquote(as_tag(tag_adverb(.(pattern), args, rm_args))))
-  attr(res,"definition") <- rlang::expr(tag(
-    pattern = !!pattern, args = !!args, rm_args = !!rm_args))
-  res
+tag <- function(pattern, args = alist(),
+               eval_args = TRUE){
+ pattern <- substitute(pattern)
+ res <- eval(bquote(as_tag(tag_adverb(.(pattern), args, eval_args))))
+ on.exit(rm(res, pattern))
+ attr(res,"definition") <- expr(tag(
+   pattern = !!pattern, args = !!args))
+ res
 }
 
-
-#' @export
-#' @rdname tag
-tag_adverb <- function(pattern, args = alist(), rm_args = character(0)){
-  f <- NULL # to avoid CMD check note
-
-  pattern <- substitute(pattern)
-
+tag_adverb <- function(pattern, args = alist(),
+                       eval_args = TRUE){
   # clean the enclosing environment
   on.exit(rm(list=ls()))
 
-  tag_adv <- as.function(c(alist(f=), args, rlang::expr({
+  f <- NULL # to avoid CMD check note
 
-    # tag additional formals
-    all_args   <- as.list(match.call()[-1])
-    f_formals  <- formals2(f)
-    t_formals  <- !!args
-    rm_args    <- !!rm_args
-    t_args     <- all_args[names(all_args) %in% names(t_formals)]
+  if("..." %in% names(args)) {
+    stop("`...` is not supported by tags and tag_adverbs. Use a list argument ",
+         "instead")
+  }
 
+  pattern <- substitute(pattern)
+
+  tag_adv <- as.function(c(alist(f=), args, expr({
     # clean the enclosing environment
-    # we leave access to f and the new formals
-    on.exit(rm(list=setdiff(ls(),c("f", names(t_formals)))))
+    on.exit(rm(list=setdiff(ls(),c(
+      "f", "CALL", "T_ARGS", "F_ARGS", "T_FORMALS", "F_FORMALS"))))
 
-    # the manufactured function has the same parameters as f, minus rm_args
-    # and plus the tag formals that the adverb hasn't used.
-    # starting from the original formals :
-     mf_formals <- formals2(f)
-    # we remove rm_args args from them
-     mf_formals[rm_args] <- NULL
-    # and add the tag formals that are not in the call
-     mf_formals <- c(mf_formals,t_formals[
-       ! names(t_formals) %in% names(match.call()[-1])])
+    # formals of the input function
+    f_formals  <- formals2(f)
+    # tag formals / or new formals
+    t_formals  <- !!args
+
+    if(length(intersect(names(f_formals), names(t_formals))))
+      stop("The new formals and the arguments of the input function are conflicting")
+
+    t_args <- rlang::call_args(match.call())[-1] # args minus f
+
+
+    # mf has same formals as f, plus unused tag formals
+    mf_formals <- formals2(f)
+
+    # and add the tag formals that are not in the adverb call
+    mf_formals <- c(mf_formals,t_formals[
+      ! names(t_formals) %in% names(t_args)])
 
     # the call to be altered by the adverb is the same as the adverb call
     # - with a different function (f instead of adverb$f or adverb(f))
     # - without the arguments from the adverb
-    f_call <- substitute(as.call( c(f,`[<-`(
-      as.list(match.call()[-1]),
-      ARG_NAMES, value = NULL))),
-      list(ARG_NAMES = names(t_formals)))
 
-    f_call_unexp <- substitute(as.call( c(f,`[<-`(
-      as.list(match.call(expand.dots = FALSE)[-1]),
-      ARG_NAMES, value = NULL))),
-      list(ARG_NAMES = names(t_formals)))
+    CALL <- as.function(c(
+      alist(eval = TRUE, type = c("expanded","unexpanded","raw")),
+      bquote({
+        type = match.arg(type)
+        # CALL will capture the match.call() or sys.call(), remove the
+        # arguments that are not formals of f, and replace the function by f,
+        # then optionally evaluate
+        .ENV <- eval.parent(quote(.ENV))
+        mc <-
+          if (type == "expanded") {
+            eval(quote(match.call()), .ENV)
+          } else if (type == "unexpanded") {
+            eval(quote(match.call(expand.dots = FALSE)), .ENV)
+          } else {
+            sys.call(frame_pos(.ENV))
+          }
+        args <- as.list(mc[-1])
+        args[.(names(t_formals))] <- NULL
+        unevaluated_call <- as.call(c(eval.parent(f), args))
+        if (eval) eval.parent(unevaluated_call, 2) else unevaluated_call
+      })
+    ))
 
-    s_call <- substitute(as.call( c(f,`[<-`(
-      as.list(sys.call()[-1]),
-      ARG_NAMES, value = NULL))),
-      list(ARG_NAMES = names(t_formals)))
+    F_ARGS <-  as.function(c(
+      alist(eval = TRUE, type = c("expanded","unexpanded","raw")),
+      quote({
+        type = match.arg(type)
+        .ENV <- eval.parent(quote(.ENV))
+        mc <-
+          if (type == "expanded") {
+            eval(quote(match.call()), .ENV)
+          } else if (type == "unexpanded") {
+            eval(quote(match.call(expand.dots = FALSE)), .ENV)
+          } else {
+            sys.call(frame_pos(.ENV))
+          }
+        unevaluated_args <- as.list(mc[-1])
+        if (eval) lapply(unevaluated_args, eval.parent, 3) else unevaluated_args
+      })
+    ))
 
-    as.function(c(mf_formals, substitute({
-      SCALL <- SCALL_0
-      CALL <- CALL_0
-      CALL_UNEXP <- CALL_UNEXP_0
-      ARGS     <- as.list(CALL[-1])
-      ARGS_UNEXP <- as.list(CALL_UNEXP[-1])
-      NEW_FORMALS <- NEW_FORMALS_0
-      FORMALS <- formals2(f)
-      # print(dplyr::lst(CALL, FUN, ARGS, A_FORMALS, F_FORMALS))
-      PATTERN
-    }, list(PATTERN = quote(!!pattern),
-            SCALL_0 = s_call,
-            CALL_0 = f_call,
-            CALL_UNEXP_0 = f_call_unexp,
-            NEW_FORMALS_0 = t_formals))))
+    # F_FORMALS simply returns f's formals, no local computation needed
+    F_FORMALS <-  as.function(list(f_formals))
+
+    T_ARGS <- as.function(c(alist(eval = TRUE), expr({
+      unevaluated_args <- !!quote(!!t_args)
+      if (eval) lapply(unevaluated_args, eval.parent, 3) else unevaluated_args
+    })))
+
+    # T_FORMALS simply returns the tag's formals, no local computation needed
+    T_FORMALS <- as.function(list(expr({!!quote(!!t_formals)})))
+
+    # if eval_args is TRUE, the tag arguments are evaluated and put in the
+    # local environment, if not the function only contains the pattern
+    manufactured_function <-
+      if(!!eval_args) {
+        as.function(c(mf_formals, quote({
+          .ENV <- environment()
+          list2env(T_ARGS(eval = TRUE), environment())
+          !!pattern
+        })))
+      } else {
+        as.function(c(mf_formals, quote({
+          .ENV <- environment()
+          !!pattern
+          })))
+      }
+
+    manufactured_function
   })))
-  attr(tag_adv,"definition") <- rlang::expr(tag_adverb(
-    pattern = !!pattern, args = !!args, rm_args = !!rm_args))
+  attr(tag_adv,"definition") <- expr(tag_adverb(
+    pattern = !!pattern, args = !!args))
   add_class(tag_adv, "tag_adverb")
 }
 
 
+
+frame_pos <- function(frame) {
+  pos <- which(sapply(sys.frames(), identical, frame))
+  if(!length(pos)) pos <- 0
+  pos
+}
