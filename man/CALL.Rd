@@ -32,10 +32,8 @@ These functions should only be used inside of tag definitions.
 \item{\code{f}}{input function}
 \item{\code{CALL()}}{return evaluated or unevaluated call}
 \item{\code{F_ARGS()}}{return evaluated or unevaluated arguments of input function}
-\item{\code{T_ARGS()}}{return evaluated or unevaluated arguments of input function}
+\item{\code{T_ARGS()}}{return evaluated or unevaluated arguments of tag}
 \item{\code{F_FORMALS()}}{return the input function's formals}
 \item{\code{T_FORMALS()}}{return he tag's formals}
-\item{\code{NEW_FORMALS()}}{The formals of the \code{tag}, or additional formals of
-the \code{tag_adverb}}
 }
 }
