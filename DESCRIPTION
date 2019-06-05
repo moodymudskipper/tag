@@ -1,6 +1,6 @@
 Package: tag
 Title: Build tags
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R: person("Antoine", "Fabri", email = "antoine.fabri@gmail.com", role = c("aut", "cre"))
 Description: A set of functions to build 'tags' or convert to them.
     Tags are essentially adverb factories, they build adverbs (also called function operators) from a set of parameters.
