@@ -25,7 +25,67 @@ eval_deep <- function(x){
 #' imports
 #'
 #' @importFrom rlang names2 exec exprs expr set_names enexpr syms
+#' @name imports
 NULL
+
+
+#' Pattern helpers
+#'
+#' These functions should only be used inside of tag definitions.
+#'
+#' @param eval wether to evaluate the call or arguments
+#' @param type type of call. `"expanded"` uses `match.call()`, `"unexpanded"`
+#'   uses `match.call(expand.dots=FALSE)`, `"raw"` uses `sys.call()`
+#'
+#' @details
+#' \describe{
+#'   \item{`f`}{input function}
+#'   \item{`CALL()`}{return evaluated or unevaluated call}
+#'   \item{`F_ARGS()`}{return evaluated or unevaluated arguments of input function}
+#'   \item{`T_ARGS()`}{return evaluated or unevaluated arguments of tag}
+#'   \item{`F_FORMALS()`}{return the input function's formals}
+#'   \item{`T_FORMALS()`}{return he tag's formals}
+#' }
+#'
+#'
+#' @export
+CALL <- function(eval = TRUE, type = c("expanded","unexpanded","raw")){
+  stop("CALL() should only be called in a tag definition")
+}
+
+#' @export
+#' @rdname CALL
+T_ARGS <- function(eval = TRUE){
+  stop("T_ARGS() should only be called in a tag definition")
+}
+
+#' @export
+#' @rdname CALL
+F_ARGS <- function(eval = TRUE, type = c("expanded","unexpanded","raw")){
+  stop("F_ARGS() should only be called in a tag definition")
+}
+
+#' @export
+#' @rdname CALL
+T_FORMALS <- function(){
+  stop("T_FORMALS() should only be called in a tag definition")
+}
+
+#' @export
+#' @rdname CALL
+F_FORMALS <- function(){
+  stop("F_FORMALS() should only be called in a tag definition")
+}
+
+
+
+
+
+
+
+
+
+
 
 
 
