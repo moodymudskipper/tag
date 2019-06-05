@@ -1,3 +1,10 @@
+#' tag and tag_adverb methods for print
+#'
+#' *tag* provides `tag` and `tag_adverb` methods for `print`. Additionally to
+#' the raw code, they print the class of the object and its definition.
+#' @param x an object used to select a method.
+#' @param ... further arguments passed to or from other methods.
+#'
 #' @export
 print.tag <- function(x, ...){
   cat("# a tag\n\n")
@@ -9,6 +16,7 @@ print.tag <- function(x, ...){
 }
 
 #' @export
+#' @rdname print.tag
 print.tag_adverb <- function(x, ...){
   cat("# a tag_adverb\n\n")
   cat("definition:\n")
