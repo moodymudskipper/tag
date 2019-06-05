@@ -11,13 +11,38 @@
 # defined in this package. The conversion works in a similar fashion in the
 # opposite direction.
 
-#' Convert to a tag or a tag_adverb
+#' Convert to a tag
 #'
-#' tags can be converted to tag_adverbs and conversely, standard function
-#' operators can also be converted to tag or tag adverbs.
+#' convert an regular function operator to a tag
 #'
-#' @param f a function
+#' `as_tag` might not work on all cases but is made available as a
+#' convenient way to change most adverbs into tags and benefit from
+#' their syntax.
+#'
+#' @param f a function operator
 #' @export
+#' @example
+#' using_quietly0 <- as_tag(purrr::quietly)
+#' using_quietly0$sqrt(-1)
+#' # https://colinfay.me/purrr-adverb-tidyverse/
+#' sleepy <- function(fun, sleep){
+#'   function(...){
+#'    Sys.sleep(sleep)
+#'    fun(...)
+#'   }
+#' }
+#' sleep_print <- sleepy(Sys.time, 5)
+#' sleep_print()
+#'
+#' using_sleepy0 <- as_tag(sleepy)
+#' using_sleepy0(5)$Sys.time()
+#' using_sleepy0$Sys.time(sleep = 5)
+#' # by comparison, to define it directly as a tag :
+#' using_sleepy1 <- tag(args=alist(.sleep=), {
+#'   Sys.sleep(.sleep)
+#'   CALL(eval=TRUE)})
+#' using_sleepy1(5)$Sys.time()
+#' using_sleepy1$Sys.time(.sleep = 5)
 as_tag <- function(f){
   if(is_tag(f)) return(f)
 
@@ -32,7 +57,7 @@ as_tag <- function(f){
 
   tag_ <- as.function(c(tag_formals, quote({
     # get args from call
-    partial_args <- as.list(match.call())[-1]
+    partial_args <- rlang::call_args(match.call())
     # a tag creates a tag adverb, which is f partialized on given arguments
     tag_adv <- purrr::partial(f, !!!partial_args)
     # give the tag adverb has a definition attribute and a class
@@ -55,9 +80,6 @@ as_tag <- function(f){
   add_class("tag", x = tag_)
 }
 
-
-#' @export
-#' @rdname as_tag
 as_tag_adverb<- function(f) {
   if(is_tag_adverb(f)) return(f)
 
