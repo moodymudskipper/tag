@@ -2,16 +2,18 @@
 % Please edit documentation in R/02_as.R
 \name{as_tag}
 \alias{as_tag}
-\alias{as_tag_adverb}
-\title{Convert to a tag or a tag_adverb}
+\title{Convert to a tag}
 \usage{
 as_tag(f)
-
-as_tag_adverb(f)
 }
 \arguments{
-\item{f}{a function operator (adverb)}
+\item{f}{a function operator}
 }
 \description{
-Convert without loss of information
+convert an regular function operator to a tag
+}
+\details{
+\code{as_tag} might not work on all cases but is made available as a
+convenient way to change most adverbs into tags and benefit from
+their syntax.
 }
