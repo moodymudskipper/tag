@@ -33,12 +33,34 @@ NULL
 #' @rdname dollar
 #' @export
 `$.tag_adverb` <- function (e1, e2) {
+  e2_val <- get(e2,envir = parent.frame())
+  if(is_tag(e2_val)) {
+    composed_adverb <- as.function(c(
+      alist(f=),
+      formals2(e2_val),
+      substitute(
+        E1(exec(E2, !!!call_args(match.call())[-1])(f)),
+        list(E1 = substitute(e1), E2 = as.symbol(e2)))
+    ))
+    return(as_tag(add_class(composed_adverb, "tag_adverb")))
+  }
   eval.parent(bquote(.(e1)(.(as.symbol(e2)))))
 }
 
 #' @rdname dollar
 #' @export
 `$.tag` <- function (e1, e2) {
+  e2_val <- get(e2,envir = parent.frame())
+  if(is_tag(e2_val)) {
+    composed_adverb <- as.function(c(
+      alist(f=),
+      formals2(e2_val),
+      substitute(
+        E1()(exec(E2, !!!call_args(match.call())[-1])(f)),
+        list(E1 = substitute(e1), E2 = as.symbol(e2)))
+    ))
+    return(as_tag(add_class(composed_adverb, "tag_adverb")))
+  }
   eval.parent(substitute(E1()$E2,
               list(E1 = substitute(e1),
                    # because e2 is captured as a string after $
