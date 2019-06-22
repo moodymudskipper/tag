@@ -21,7 +21,7 @@
 #'
 #' @param f a function operator
 #' @export
-#' @example
+#' @examples
 #' using_quietly0 <- as_tag(purrr::quietly)
 #' using_quietly0$sqrt(-1)
 #' # https://colinfay.me/purrr-adverb-tidyverse/
