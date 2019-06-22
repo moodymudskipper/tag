@@ -17,3 +17,26 @@ convert an regular function operator to a tag
 convenient way to change most adverbs into tags and benefit from
 their syntax.
 }
+\examples{
+using_quietly0 <- as_tag(purrr::quietly)
+using_quietly0$sqrt(-1)
+# https://colinfay.me/purrr-adverb-tidyverse/
+sleepy <- function(fun, sleep){
+  function(...){
+   Sys.sleep(sleep)
+   fun(...)
+  }
+}
+sleep_print <- sleepy(Sys.time, 5)
+sleep_print()
+
+using_sleepy0 <- as_tag(sleepy)
+using_sleepy0(5)$Sys.time()
+using_sleepy0$Sys.time(sleep = 5)
+# by comparison, to define it directly as a tag :
+using_sleepy1 <- tag(args=alist(.sleep=), {
+  Sys.sleep(.sleep)
+  CALL(eval=TRUE)})
+using_sleepy1(5)$Sys.time()
+using_sleepy1$Sys.time(.sleep = 5)
+}
