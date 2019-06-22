@@ -18,13 +18,9 @@ formals2 <- function(f){
     as.pairlist(args[-length(args)])
 }
 
-eval_deep <- function(x){
-  lapply(x, function(y) if (is.list(y)) eval(y) else eval_deep(y))
-}
-
 #' imports
 #'
-#' @importFrom rlang names2 exec exprs expr set_names enexpr syms
+#' @importFrom rlang names2 exec exprs expr set_names enexpr syms call_args
 #' @name imports
 NULL
 
