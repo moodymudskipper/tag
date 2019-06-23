@@ -20,10 +20,6 @@ usethis::use_version()
 usethis::use_news_md()
 
 
-
-
-
-
 shell("git remote add origin https://github.com/moodymudskipper/tag.git", intern = TRUE)
 shell("git push -u origin master",intern = TRUE)
 shell("git push -u origin master -f",intern = TRUE)
