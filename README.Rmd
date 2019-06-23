@@ -231,3 +231,24 @@ new ones
 tags::debugging
 ```
 
+
+## composing tags
+
+In some circumstances one might want to use several tags on an input function.
+
+We can compose tags using the `$` operator.
+
+```{r}
+negating <- tag({
+  call <- CALL(eval = FALSE)
+  call[[1]] <- Negate(f)
+  eval.parent(call)
+})
+
+negating$isTRUE(FALSE)
+negating$negating$isTRUE(FALSE)
+```
+
+
+
+
