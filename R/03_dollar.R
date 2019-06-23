@@ -42,7 +42,11 @@ NULL
         E1(exec(E2, !!!call_args(match.call())[-1])(f)),
         list(E1 = substitute(e1), E2 = as.symbol(e2)))
     ))
-    return(as_tag(add_class(composed_adverb, "tag_adverb")))
+    composed_adverb <- as_tag(add_class(composed_adverb, "tag_adverb"))
+    def <- match.call()
+    def[[1]] <- quote(`$`)
+    attr(composed_adverb, "definition") <- def
+    return(composed_adverb)
   }
   eval.parent(bquote(.(e1)(.(as.symbol(e2)))))
 }
@@ -59,11 +63,18 @@ NULL
         E1()(exec(E2, !!!call_args(match.call())[-1])(f)),
         list(E1 = substitute(e1), E2 = as.symbol(e2)))
     ))
-    return(as_tag(add_class(composed_adverb, "tag_adverb")))
+    composed_adverb <- as_tag(add_class(composed_adverb, "tag_adverb"))
+    def <- match.call()
+    def[[1]] <- quote(`$`)
+    attr(composed_adverb, "definition") <- def
+    return(composed_adverb)
   }
   eval.parent(substitute(E1()$E2,
               list(E1 = substitute(e1),
                    # because e2 is captured as a string after $
                    E2 = as.symbol(e2))))
 }
+
+
+
 
