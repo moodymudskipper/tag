@@ -1,5 +1,8 @@
 # tag 0.2.0
 
+* Pattern helpers now don't give a different output depending on syntax
+* Introduced tag composition so several tags can be used on an input function
+
 # tag 0.1.0
 
 * A new system of pattern helpers has been designed, we use `CALL(eval = TRUE)`
