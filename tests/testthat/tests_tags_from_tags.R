@@ -47,11 +47,12 @@ test_that("wrapping tag works",{
 wrapping <- tag(
   args= alist(.before=NULL, .after=NULL, .around = identity),
   eval_args = FALSE,{
-    t_args <- T_ARGS(eval = FALSE)
+    t_args <- T_ARGS(eval = FALSE) %union% T_FORMALS()
     eval(t_args[[".before"]])
     . <- eval(expr(rlang::as_function(!!t_args[[".around"]])(!!CALL(eval = FALSE))))
     eval(t_args[[".after"]])
     .
   })
 expect_no_error(wrapping(print("hi!"))$print('hello'))
+expect_no_error(wrapping$print('hello', .before = print("hi")))
 })
