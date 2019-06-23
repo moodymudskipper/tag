@@ -228,7 +228,7 @@ tag_adverb <- function(pattern, args = alist(),
       alist(eval = TRUE, type = c("expanded","unexpanded","raw")),
       quote({
         type = match.arg(type)
-        unevaluated_args <- call_args(.CALLS[[type]])
+        unevaluated_args <- call_args(.CALLS[[type]]) %setdiff% T_FORMALS()
         if (eval) lapply(unevaluated_args, eval.parent, 3) else unevaluated_args
       })
     ))
@@ -237,7 +237,8 @@ tag_adverb <- function(pattern, args = alist(),
     F_FORMALS <-  as.function(list(f_formals))
 
     T_ARGS <- as.function(c(alist(eval = TRUE), expr({
-      unevaluated_args <- !!quote(!!t_args)
+      unevaluated_args <- (!!quote(!!t_args)) %union% (
+        call_args(.CALLS[["expanded"]]) %intersect% T_FORMALS())
       if (eval) lapply(unevaluated_args, eval.parent, 3) else unevaluated_args
     })))
 
@@ -250,15 +251,12 @@ tag_adverb <- function(pattern, args = alist(),
       if(!!eval_args) {
         as.function(c(mf_formals, quote({
           .CALLS <<- get_calls()
-          #.ENV <- environment()
-          browser()
-          list2env(T_ARGS(eval = TRUE) %union% T_FORMALS(), environment())
+          list2env(T_ARGS(eval = TRUE), environment())
           !!pattern
         })))
       } else {
         as.function(c(mf_formals, quote({
           .CALLS <<- get_calls()
-          #.ENV <- environment()
           !!pattern
         })))
       }
@@ -289,5 +287,11 @@ get_calls <- function() {
   c(e1, e2[!names(e2) %in% names(e1)])
 }
 
+`%setdiff%` <- function(e1, e2) {
+  e1[names(e2)] <- NULL
+  e1
+}
 
-
+`%intersect%` <- function(e1, e2) {
+  e1[intersect(names(e1), names(e2))]
+}
