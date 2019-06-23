@@ -1,3 +1,5 @@
+# tag 0.2.0
+
 # tag 0.1.0
 
 * A new system of pattern helpers has been designed, we use `CALL(eval = TRUE)`
